@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.QueueingConsumer;
 
 /**
@@ -54,24 +55,29 @@ public abstract class AbstractConsumer extends AbstractAmqpRunnable
     {
         final QueueingConsumer consumer = new QueueingConsumer(channel);
         consumerHolder.set(consumer);
+    }
 
-        channel.basicConsume(getName(), false, consumer);
+    protected Consumer getConsumer()
+    {
+        return consumerHolder.get();
     }
 
     @Override
     protected void disconnectCallback(@Nullable final Channel channel)
     {
-        final QueueingConsumer queueingConsumer = consumerHolder.get();
+        if (channel != null && channel.isOpen()) {
+            final QueueingConsumer queueingConsumer = consumerHolder.get();
 
-        if (queueingConsumer != null) {
-            final String consumerTag = queueingConsumer.getConsumerTag();
+            if (queueingConsumer != null) {
+                final String consumerTag = queueingConsumer.getConsumerTag();
 
-            if (consumerTag != null) {
-                try {
-                    channel.basicCancel(consumerTag);
-                }
-                catch (IOException ioe) {
-                    LOG.warnDebug(ioe, "While cancelling subscription for %s", consumerTag);
+                if (consumerTag != null) {
+                    try {
+                        channel.basicCancel(consumerTag);
+                    }
+                    catch (IOException ioe) {
+                        LOG.warnDebug(ioe, "While cancelling subscription for %s", consumerTag);
+                    }
                 }
             }
         }

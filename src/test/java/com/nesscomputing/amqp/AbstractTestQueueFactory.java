@@ -17,77 +17,66 @@ package com.nesscomputing.amqp;
 
 import static java.lang.String.format;
 
-import java.util.UUID;
-
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
-
-
-import org.apache.activemq.ActiveMQConnectionFactory;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.name.Named;
-import com.nesscomputing.amqp.JmsModule;
-import com.nesscomputing.amqp.JmsRunnableFactory;
-import com.nesscomputing.amqp.QueueConsumer;
-import com.nesscomputing.amqp.QueueProducer;
 import com.nesscomputing.amqp.util.CountingMessageCallback;
 import com.nesscomputing.amqp.util.DummyMessageCallback;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
-import com.nesscomputing.testing.lessio.AllowDNSResolution;
-import com.nesscomputing.testing.lessio.AllowNetworkListen;
+import com.nesscomputing.jackson.NessJacksonModule;
 
-@AllowDNSResolution
-@AllowNetworkListen(ports={0})
-public class TestQueueFactory
+public abstract class AbstractTestQueueFactory
 {
+    public static final long DRAIN_SLEEP = 500L;
+
     @Inject
     @Named("test")
     public AmqpRunnableFactory queueRunnableFactory;
 
-    private static Connection CONNECTION = null;
-    private static String BROKER_URI = null;
-
-    @BeforeClass
-    public static void startBroker() throws Exception
-    {
-        BROKER_URI = format("vm:broker:(vm://testbroker-%s)?persistent=false&useJmx=false", UUID.randomUUID().toString());
-        final ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(BROKER_URI);
-        Assert.assertNull(CONNECTION);
-        CONNECTION = connectionFactory.createConnection();
-        Thread.sleep(2000L);
-    }
-
-    @AfterClass
-    public static void shutdownBroker() throws Exception
-    {
-        Assert.assertNotNull(CONNECTION);
-        CONNECTION.close();
-        CONNECTION = null;
-    }
+    protected abstract AmqpProvider getProvider();
 
     @Before
-    public void setUp()
+    public void setUp() throws Exception
     {
-        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.jms.test.enabled", "true",
-                                                                                          "ness.jms.test.connection-url", BROKER_URI));
+        getProvider().startup();
+
+        final String brokerUri = getProvider().getUri();
+
+        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.amqp.test.enabled", "true",
+                                                                    "ness.amqp.test.connection-url", brokerUri));
+
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
+                                                       new Module() {
+                                                           @Override
+                                                           public void configure(final Binder binder) {
+                                                               binder.disableCircularProxies();
+                                                               binder.requireExplicitBindings();
+                                                           }
+                                                       },
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         injector.injectMembers(this);
 
         Assert.assertNotNull(queueRunnableFactory);
+    }
+
+    @After
+    public void tearDown() throws Exception
+    {
+        getProvider().shutdown();
     }
 
     @Test
@@ -100,8 +89,8 @@ public class TestQueueFactory
     @Test
     public void testSimpleProducer() throws Exception
     {
-        final QueueProducer<Object> queueProducer = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
-        Assert.assertNotNull(queueProducer);
+        final QueuePublisher<Object> queuePublisher = queueRunnableFactory.createQueueJsonPublisher("test-queue");
+        Assert.assertNotNull(queuePublisher);
     }
 
     @Test
@@ -124,16 +113,16 @@ public class TestQueueFactory
     @Test
     public void stopProducerWithNoMessages() throws Exception
     {
-        final QueueProducer<Object> queueProducer = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
-        Assert.assertNotNull(queueProducer);
+        final QueuePublisher<Object> queuePublisher = queueRunnableFactory.createQueueJsonPublisher("test-queue");
+        Assert.assertNotNull(queuePublisher);
 
-        final Thread queueThread = new Thread(queueProducer);
+        final Thread queueThread = new Thread(queuePublisher);
         queueThread.start();
 
         Thread.sleep(2000L);
-        Assert.assertFalse(queueProducer.isConnected());
+        Assert.assertFalse(queuePublisher.isConnected());
 
-        queueProducer.shutdown();
+        queuePublisher.shutdown();
         queueThread.interrupt();
         queueThread.join();
     }
@@ -143,27 +132,27 @@ public class TestQueueFactory
     {
         final CountingMessageCallback cmc = new CountingMessageCallback();
         final QueueConsumer queueConsumer = queueRunnableFactory.createQueueListener("test-queue", cmc);
-        final QueueProducer<Object> queueProducer = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
+        final QueuePublisher<Object> queuePublisher = queueRunnableFactory.createQueueJsonPublisher("test-queue");
         final Thread consumerThread = new Thread(queueConsumer);
-        final Thread producerThread = new Thread(queueProducer);
+        final Thread producerThread = new Thread(queuePublisher);
         consumerThread.start();
         producerThread.start();
 
         Thread.sleep(1000L);
 
         Assert.assertTrue(queueConsumer.isConnected());
-        Assert.assertFalse(queueProducer.isConnected());
+        Assert.assertFalse(queuePublisher.isConnected());
 
         final int maxCount = 1000;
         for (int i = 0; i < maxCount; i++) {
-            queueProducer.put(format("hello, world %d", i));
+            queuePublisher.put(format("hello, world %d", i));
         }
 
-        Thread.sleep(100L);
-        Assert.assertTrue(queueProducer.isEmpty());
+        Thread.sleep(DRAIN_SLEEP);
+        Assert.assertTrue(queuePublisher.isEmpty());
         Assert.assertEquals(maxCount, cmc.getCount());
 
-        queueProducer.shutdown();
+        queuePublisher.shutdown();
         queueConsumer.shutdown();
         producerThread.interrupt();
         consumerThread.interrupt();
@@ -178,10 +167,10 @@ public class TestQueueFactory
         final CountingMessageCallback cmc2 = new CountingMessageCallback();
         final QueueConsumer queueConsumer1 = queueRunnableFactory.createQueueListener("test-queue", cmc1);
         final QueueConsumer queueConsumer2 = queueRunnableFactory.createQueueListener("test-queue", cmc2);
-        final QueueProducer<Object> queueProducer = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
+        final QueuePublisher<Object> queuePublisher = queueRunnableFactory.createQueueJsonPublisher("test-queue");
         final Thread consumerThread1 = new Thread(queueConsumer1);
         final Thread consumerThread2 = new Thread(queueConsumer2);
-        final Thread producerThread = new Thread(queueProducer);
+        final Thread producerThread = new Thread(queuePublisher);
         consumerThread1.start();
         consumerThread2.start();
         producerThread.start();
@@ -190,18 +179,18 @@ public class TestQueueFactory
 
         Assert.assertTrue(queueConsumer1.isConnected());
         Assert.assertTrue(queueConsumer2.isConnected());
-        Assert.assertFalse(queueProducer.isConnected());
+        Assert.assertFalse(queuePublisher.isConnected());
 
         final int maxCount = 1000;
         for (int i = 0; i < maxCount; i++) {
-            queueProducer.put(format("hello, world %d", i));
+            queuePublisher.put(format("hello, world %d", i));
         }
 
-        Thread.sleep(100L);
-        Assert.assertTrue(queueProducer.isEmpty());
+        Thread.sleep(DRAIN_SLEEP);
+        Assert.assertTrue(queuePublisher.isEmpty());
         Assert.assertEquals(maxCount, cmc1.getCount() + cmc2.getCount());
 
-        queueProducer.shutdown();
+        queuePublisher.shutdown();
         queueConsumer1.shutdown();
         queueConsumer2.shutdown();
         producerThread.interrupt();
@@ -217,11 +206,11 @@ public class TestQueueFactory
     {
         final CountingMessageCallback cmc = new CountingMessageCallback();
         final QueueConsumer queueConsumer = queueRunnableFactory.createQueueListener("test-queue", cmc);
-        final QueueProducer<Object> queueProducer1 = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
-        final QueueProducer<Object> queueProducer2 = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
+        final QueuePublisher<Object> queuePublisher1 = queueRunnableFactory.createQueueJsonPublisher("test-queue");
+        final QueuePublisher<Object> queuePublisher2 = queueRunnableFactory.createQueueJsonPublisher("test-queue");
         final Thread consumerThread = new Thread(queueConsumer);
-        final Thread producerThread1 = new Thread(queueProducer1);
-        final Thread producerThread2 = new Thread(queueProducer2);
+        final Thread producerThread1 = new Thread(queuePublisher1);
+        final Thread producerThread2 = new Thread(queuePublisher2);
 
         consumerThread.start();
         producerThread1.start();
@@ -230,22 +219,22 @@ public class TestQueueFactory
         Thread.sleep(1000L);
 
         Assert.assertTrue(queueConsumer.isConnected());
-        Assert.assertFalse(queueProducer1.isConnected());
-        Assert.assertFalse(queueProducer2.isConnected());
+        Assert.assertFalse(queuePublisher1.isConnected());
+        Assert.assertFalse(queuePublisher2.isConnected());
 
         final int maxCount = 1000;
         for (int i = 0; i < maxCount; i++) {
-            queueProducer1.put(format("hello, world %d", i));
-            queueProducer2.put(format("hello, wold %d", i));
+            queuePublisher1.put(format("hello, world %d", i));
+            queuePublisher2.put(format("hello, wold %d", i));
         }
 
-        Thread.sleep(100L);
-        Assert.assertTrue(queueProducer1.isEmpty());
-        Assert.assertTrue(queueProducer2.isEmpty());
+        Thread.sleep(DRAIN_SLEEP);
+        Assert.assertTrue(queuePublisher1.isEmpty());
+        Assert.assertTrue(queuePublisher2.isEmpty());
         Assert.assertEquals(maxCount*2, cmc.getCount());
 
-        queueProducer1.shutdown();
-        queueProducer2.shutdown();
+        queuePublisher1.shutdown();
+        queuePublisher2.shutdown();
         queueConsumer.shutdown();
         producerThread1.interrupt();
         producerThread2.interrupt();
@@ -262,12 +251,12 @@ public class TestQueueFactory
         final CountingMessageCallback cmc2 = new CountingMessageCallback();
         final QueueConsumer queueConsumer1 = queueRunnableFactory.createQueueListener("test-queue", cmc1);
         final QueueConsumer queueConsumer2 = queueRunnableFactory.createQueueListener("test-queue", cmc2);
-        final QueueProducer<Object> queueProducer1 = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
-        final QueueProducer<Object> queueProducer2 = queueRunnableFactory.createQueueJsonMessageProducer("test-queue");
+        final QueuePublisher<Object> queuePublisher1 = queueRunnableFactory.createQueueJsonPublisher("test-queue");
+        final QueuePublisher<Object> queuePublisher2 = queueRunnableFactory.createQueueJsonPublisher("test-queue");
         final Thread consumerThread1 = new Thread(queueConsumer1);
         final Thread consumerThread2 = new Thread(queueConsumer2);
-        final Thread producerThread1 = new Thread(queueProducer1);
-        final Thread producerThread2 = new Thread(queueProducer2);
+        final Thread producerThread1 = new Thread(queuePublisher1);
+        final Thread producerThread2 = new Thread(queuePublisher2);
 
         consumerThread1.start();
         consumerThread2.start();
@@ -278,24 +267,24 @@ public class TestQueueFactory
 
         Assert.assertTrue(queueConsumer1.isConnected());
         Assert.assertTrue(queueConsumer2.isConnected());
-        Assert.assertFalse(queueProducer1.isConnected());
-        Assert.assertFalse(queueProducer2.isConnected());
+        Assert.assertFalse(queuePublisher1.isConnected());
+        Assert.assertFalse(queuePublisher2.isConnected());
 
         final int maxCount = 1000;
         for (int i = 0; i < maxCount; i++) {
-            queueProducer1.put(format("hello, world %d", i));
-            queueProducer2.put(format("hello, wold %d", i));
+            queuePublisher1.put(format("hello, world %d", i));
+            queuePublisher2.put(format("hello, wold %d", i));
         }
 
-        Thread.sleep(100L);
+        Thread.sleep(DRAIN_SLEEP);
 
-        Assert.assertTrue(queueProducer1.isEmpty());
-        Assert.assertTrue(queueProducer2.isEmpty());
+        Assert.assertTrue(queuePublisher1.isEmpty());
+        Assert.assertTrue(queuePublisher2.isEmpty());
 
         Assert.assertEquals(maxCount*2, cmc1.getCount() + cmc2.getCount());
 
-        queueProducer1.shutdown();
-        queueProducer2.shutdown();
+        queuePublisher1.shutdown();
+        queuePublisher2.shutdown();
         queueConsumer1.shutdown();
         queueConsumer2.shutdown();
         producerThread1.interrupt();

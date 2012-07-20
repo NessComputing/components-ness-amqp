@@ -17,108 +17,95 @@ package com.nesscomputing.amqp;
 
 import static java.lang.String.format;
 
-import java.util.UUID;
-
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
-
-
-import org.apache.activemq.ActiveMQConnectionFactory;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.name.Named;
-import com.nesscomputing.amqp.JmsModule;
-import com.nesscomputing.amqp.JmsRunnableFactory;
-import com.nesscomputing.amqp.TopicConsumer;
-import com.nesscomputing.amqp.TopicProducer;
 import com.nesscomputing.amqp.util.CountingMessageCallback;
 import com.nesscomputing.amqp.util.DummyMessageCallback;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
-import com.nesscomputing.testing.lessio.AllowDNSResolution;
-import com.nesscomputing.testing.lessio.AllowNetworkAccess;
-import com.nesscomputing.testing.lessio.AllowNetworkListen;
+import com.nesscomputing.jackson.NessJacksonModule;
 
-@AllowDNSResolution
-@AllowNetworkListen(ports= {0})
-@AllowNetworkAccess(endpoints= {"*:*"})
-public class TestTopicFactory
+public abstract class AbstractTestExchangeFactory
 {
     @Inject
     @Named("test")
-    public AmqpRunnableFactory topicRunnableFactory;
+    public AmqpRunnableFactory exchangeRunnableFactory;
 
-    private static Connection CONNECTION = null;
-    private static String BROKER_URI = null;
+    public static final long DRAIN_SLEEP = 500L;
 
-    @BeforeClass
-    public static void startBroker() throws Exception
-    {
-        BROKER_URI = format("vm:broker:(vm://testbroker-%s)?persistent=false&useJmx=false", UUID.randomUUID().toString());
-        final ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(BROKER_URI);
-        Assert.assertNull(CONNECTION);
-        CONNECTION = connectionFactory.createConnection();
-        Thread.sleep(2000L);
-    }
-
-    @AfterClass
-    public static void shutdownBroker() throws Exception
-    {
-        Assert.assertNotNull(CONNECTION);
-        CONNECTION.close();
-        CONNECTION = null;
-    }
+    protected abstract AmqpProvider getProvider();
 
     @Before
-    public void setUp()
+    public void setUp() throws Exception
     {
-        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.jms.test.enabled", "true",
-                                                                                          "ness.jms.test.connection-url", BROKER_URI));
+        getProvider().startup();
+
+        final String brokerUri = getProvider().getUri();
+
+        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.amqp.test.enabled", "true",
+                                                                    "ness.amqp.test.connection-url", brokerUri));
+
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
+                                                       new Module() {
+                                                           @Override
+                                                           public void configure(final Binder binder) {
+                                                               binder.disableCircularProxies();
+                                                               binder.requireExplicitBindings();
+                                                           }
+                                                       },
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         injector.injectMembers(this);
 
-        Assert.assertNotNull(topicRunnableFactory);
+        Assert.assertNotNull(exchangeRunnableFactory);
+    }
+
+    @After
+    public void tearDown() throws Exception
+    {
+        getProvider().shutdown();
     }
 
     @Test
     public void testSimpleConsumer() throws Exception
     {
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", new DummyMessageCallback());
-        Assert.assertNotNull(topicConsumer);
+        final ExchangeConsumer exchangeConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", new DummyMessageCallback());
+        Assert.assertNotNull(exchangeConsumer);
     }
 
     @Test
     public void testSimpleProducer() throws Exception
     {
-        final TopicProducer<Object> topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
-        Assert.assertNotNull(topicProducer);
+        final ExchangePublisher<Object> exchangeConsumer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
+        Assert.assertNotNull(exchangeConsumer);
     }
 
     @Test
     public void stopConsumerWithNoMessages() throws Exception
     {
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", new DummyMessageCallback());
-        Assert.assertNotNull(topicConsumer);
+        final ExchangeConsumer exchangeConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", new DummyMessageCallback());
+        Assert.assertNotNull(exchangeConsumer);
 
-        final Thread topicThread = new Thread(topicConsumer);
+        final Thread topicThread = new Thread(exchangeConsumer);
         topicThread.start();
 
         Thread.sleep(2000L);
-        Assert.assertTrue(topicConsumer.isConnected());
+        Assert.assertTrue(exchangeConsumer.isConnected());
 
-        topicConsumer.shutdown();
+        exchangeConsumer.shutdown();
         topicThread.interrupt();
         topicThread.join();
     }
@@ -126,7 +113,7 @@ public class TestTopicFactory
     @Test
     public void stopProducerWithNoMessages() throws Exception
     {
-        final TopicProducer<Object>topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangePublisher<Object>topicProducer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         Assert.assertNotNull(topicProducer);
 
         final Thread topicThread = new Thread(topicProducer);
@@ -144,8 +131,8 @@ public class TestTopicFactory
     public void testProduceConsume() throws Exception
     {
         final CountingMessageCallback cmc = new CountingMessageCallback();
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", cmc);
-        final TopicProducer<Object> topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangeConsumer topicConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", cmc);
+        final ExchangePublisher<Object> topicProducer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         final Thread consumerThread = new Thread(topicConsumer);
         final Thread producerThread = new Thread(topicProducer);
         consumerThread.start();
@@ -161,7 +148,7 @@ public class TestTopicFactory
             topicProducer.put(format("hello, world %d", i));
         }
 
-        Thread.sleep(100L);
+        Thread.sleep(DRAIN_SLEEP);
         Assert.assertTrue(topicProducer.isEmpty());
         Assert.assertEquals(maxCount, cmc.getCount());
 
@@ -178,9 +165,9 @@ public class TestTopicFactory
     {
         final CountingMessageCallback cmc1 = new CountingMessageCallback();
         final CountingMessageCallback cmc2 = new CountingMessageCallback();
-        final ExchangeConsumer topicConsumer1 = topicRunnableFactory.createTopicListener("test-topic", cmc1);
-        final ExchangeConsumer topicConsumer2 = topicRunnableFactory.createTopicListener("test-topic", cmc2);
-        final TopicProducer<Object> topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangeConsumer topicConsumer1 = exchangeRunnableFactory.createExchangeListener("test-topic", cmc1);
+        final ExchangeConsumer topicConsumer2 = exchangeRunnableFactory.createExchangeListener("test-topic", cmc2);
+        final ExchangePublisher<Object> topicProducer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         final Thread consumerThread1 = new Thread(topicConsumer1);
         final Thread consumerThread2 = new Thread(topicConsumer2);
         final Thread producerThread = new Thread(topicProducer);
@@ -199,7 +186,7 @@ public class TestTopicFactory
             topicProducer.put(format("hello, world %d", i));
         }
 
-        Thread.sleep(100L);
+        Thread.sleep(DRAIN_SLEEP);
         Assert.assertTrue(topicProducer.isEmpty());
         Assert.assertEquals(maxCount, cmc1.getCount());
         Assert.assertEquals(maxCount, cmc2.getCount());
@@ -219,9 +206,9 @@ public class TestTopicFactory
     public void testTwoProducersOneConsumer() throws Exception
     {
         final CountingMessageCallback cmc = new CountingMessageCallback();
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", cmc);
-        final TopicProducer<Object> topicProducer1 = topicRunnableFactory.createTopicJsonProducer("test-topic");
-        final TopicProducer<Object> topicProducer2 = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangeConsumer topicConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", cmc);
+        final ExchangePublisher<Object> topicProducer1 = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
+        final ExchangePublisher<Object> topicProducer2 = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         final Thread consumerThread = new Thread(topicConsumer);
         final Thread producerThread1 = new Thread(topicProducer1);
         final Thread producerThread2 = new Thread(topicProducer2);
@@ -242,7 +229,7 @@ public class TestTopicFactory
             topicProducer2.put(format("hello, wold %d", i));
         }
 
-        Thread.sleep(100L);
+        Thread.sleep(DRAIN_SLEEP);
         Assert.assertTrue(topicProducer1.isEmpty());
         Assert.assertTrue(topicProducer2.isEmpty());
         Assert.assertEquals(maxCount*2, cmc.getCount());
@@ -263,10 +250,10 @@ public class TestTopicFactory
     {
         final CountingMessageCallback cmc1 = new CountingMessageCallback();
         final CountingMessageCallback cmc2 = new CountingMessageCallback();
-        final ExchangeConsumer topicConsumer1 = topicRunnableFactory.createTopicListener("test-topic", cmc1);
-        final ExchangeConsumer topicConsumer2 = topicRunnableFactory.createTopicListener("test-topic", cmc2);
-        final TopicProducer<Object> topicProducer1 = topicRunnableFactory.createTopicJsonProducer("test-topic");
-        final TopicProducer<Object> topicProducer2 = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangeConsumer topicConsumer1 = exchangeRunnableFactory.createExchangeListener("test-topic", cmc1);
+        final ExchangeConsumer topicConsumer2 = exchangeRunnableFactory.createExchangeListener("test-topic", cmc2);
+        final ExchangePublisher<Object> topicProducer1 = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
+        final ExchangePublisher<Object> topicProducer2 = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         final Thread consumerThread1 = new Thread(topicConsumer1);
         final Thread consumerThread2 = new Thread(topicConsumer2);
         final Thread producerThread1 = new Thread(topicProducer1);
@@ -290,7 +277,7 @@ public class TestTopicFactory
             topicProducer2.put(format("hello, wold %d", i));
         }
 
-        Thread.sleep(500L);
+        Thread.sleep(DRAIN_SLEEP);
 
         Assert.assertTrue(topicProducer1.isEmpty());
         Assert.assertTrue(topicProducer2.isEmpty());

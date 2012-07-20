@@ -15,77 +15,86 @@
  */
 package com.nesscomputing.amqp;
 
-import javax.jms.JMSException;
-import javax.jms.Message;
+import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.name.Named;
-import com.nesscomputing.amqp.ConsumerCallback;
-import com.nesscomputing.amqp.JmsModule;
-import com.nesscomputing.amqp.JmsRunnableFactory;
-import com.nesscomputing.amqp.TopicConsumer;
-import com.nesscomputing.amqp.TopicProducer;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
+import com.nesscomputing.jackson.NessJacksonModule;
+import com.rabbitmq.client.QueueingConsumer.Delivery;
 
 public class TestUnknownCaller
 {
     @Inject
     @Named("test")
-    public AmqpRunnableFactory topicRunnableFactory;
+    public AmqpRunnableFactory exchangeRunnableFactory;
+
+    private static String BROKER_URI = "amqp://some-unknown-host:65534";
 
     @Before
     public void setUp()
     {
-        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.jms.test.enabled", "true",
-                                                                                          "ness.jms.test.connection-url", "failover:(tcp://127.0.0.1:65534?daemon=true)?maxReconnectAttempts=10"));;
+        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.amqp.test.enabled", "true",
+                                                                    "ness.amqp.test.connection-url", BROKER_URI));
+
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
+                                                       new Module() {
+                                                           @Override
+                                                           public void configure(final Binder binder) {
+                                                               binder.disableCircularProxies();
+                                                               binder.requireExplicitBindings();
+                                                           }
+                                                       },
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         injector.injectMembers(this);
 
-        Assert.assertNotNull(topicRunnableFactory);
+        Assert.assertNotNull(exchangeRunnableFactory);
     }
 
     @Test
     public void testUnknownCaller() throws Exception
     {
-        final ConsumerCallback<Message> callback = new ConsumerCallback<Message>() {
+        final ConsumerCallback callback = new ConsumerCallback() {
 
             @Override
-            public boolean withMessage(Message message) throws JMSException {
+            public boolean withDelivery(Delivery delivery) throws IOException {
                 return false;
             }
         };
 
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", callback);
-        final TopicProducer<Object> topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
-        final Thread consumerThread = new Thread(topicConsumer);
-        final Thread producerThread = new Thread(topicProducer);
+        final ExchangeConsumer exchangeConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", callback);
+        final ExchangePublisher<Object> exchangeProducer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
+        final Thread consumerThread = new Thread(exchangeConsumer);
+        final Thread producerThread = new Thread(exchangeProducer);
         consumerThread.start();
         producerThread.start();
 
         Thread.sleep(1000L);
 
-        Assert.assertFalse(topicConsumer.isConnected());
-        Assert.assertFalse(topicProducer.isConnected());
+        Assert.assertFalse(exchangeConsumer.isConnected());
+        Assert.assertFalse(exchangeProducer.isConnected());
 
         Thread.sleep(10000L);
 
-        Assert.assertFalse(topicConsumer.isConnected());
-        Assert.assertFalse(topicProducer.isConnected());
+        Assert.assertFalse(exchangeConsumer.isConnected());
+        Assert.assertFalse(exchangeProducer.isConnected());
 
-        topicProducer.shutdown();
-        topicConsumer.shutdown();
+        exchangeProducer.shutdown();
+        exchangeConsumer.shutdown();
         producerThread.interrupt();
         consumerThread.interrupt();
         producerThread.join();

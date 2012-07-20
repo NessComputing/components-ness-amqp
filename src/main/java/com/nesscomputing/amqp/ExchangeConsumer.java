@@ -47,10 +47,12 @@ public final class ExchangeConsumer extends AbstractConsumer
     @Override
     protected void connectCallback(@Nonnull final Channel channel) throws IOException
     {
+        super.connectCallback(channel);
+
         channel.exchangeDeclare(getName(), getConfig().getExchangeType(), false, false, null);
         final String queueName = channel.queueDeclare().getQueue();
         channel.queueBind(queueName, getName(), "");
 
-        super.connectCallback(channel);
+        channel.basicConsume(queueName, false, getConsumer());
     }
 }

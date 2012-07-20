@@ -15,62 +15,80 @@
  */
 package com.nesscomputing.amqp;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import javax.jms.JMSException;
-import javax.jms.Message;
-
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.name.Named;
-import com.nesscomputing.amqp.ConsumerCallback;
-import com.nesscomputing.amqp.JmsModule;
-import com.nesscomputing.amqp.JmsRunnableFactory;
-import com.nesscomputing.amqp.TopicConsumer;
-import com.nesscomputing.amqp.TopicProducer;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
+import com.nesscomputing.jackson.NessJacksonModule;
+import com.rabbitmq.client.QueueingConsumer.Delivery;
 
-public class TestStrangeStuff
+public abstract class AbstractTestStrangeStuff
 {
     @Inject
     @Named("test")
-    public AmqpRunnableFactory topicRunnableFactory;
+    public AmqpRunnableFactory exchangeRunnableFactory;
+
+    protected abstract AmqpProvider getProvider();
 
     @Before
-    public void setUp()
+    public void setUp() throws Exception
     {
-        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.jms.test.enabled", "true",
-                                                                                          "ness.jms.test.connection-url", "vm://testbroker?broker.persistent=false"));
+        getProvider().startup();
+
+        final String brokerUri = getProvider().getUri();
+
+        final Config config = Config.getFixedConfig(ImmutableMap.of("ness.amqp.test.enabled", "true",
+                                                                    "ness.amqp.test.connection-url", brokerUri));
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
+                                                       new Module() {
+                                                           @Override
+                                                           public void configure(final Binder binder) {
+                                                               binder.disableCircularProxies();
+                                                               binder.requireExplicitBindings();
+                                                           }
+                                                       },
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         injector.injectMembers(this);
 
-        Assert.assertNotNull(topicRunnableFactory);
+        Assert.assertNotNull(exchangeRunnableFactory);
+    }
+
+    @After
+    public void tearDown() throws Exception
+    {
+        getProvider().shutdown();
     }
 
     @Test
     public void testConsumerDies() throws Exception
     {
-        final ConsumerCallback<Message> callback = new ConsumerCallback<Message>() {
+        final ConsumerCallback callback = new ConsumerCallback() {
 
             @Override
-            public boolean withMessage(Message message) throws JMSException {
+            public boolean withDelivery(Delivery delivery) throws IOException {
                 return false;
             }
         };
 
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", callback);
-        final TopicProducer<Object> topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangeConsumer topicConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", callback);
+        final ExchangePublisher<Object> topicProducer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         final Thread consumerThread = new Thread(topicConsumer);
         final Thread producerThread = new Thread(topicProducer);
         consumerThread.start();
@@ -102,16 +120,16 @@ public class TestStrangeStuff
     @Test
     public void testConsumerGetsInterrupted() throws Exception
     {
-        final ConsumerCallback<Message> callback = new ConsumerCallback<Message>() {
+        final ConsumerCallback callback = new ConsumerCallback() {
 
             @Override
-            public boolean withMessage(Message message) throws JMSException {
+            public boolean withDelivery(Delivery delivery) throws IOException {
                 return true;
             }
         };
 
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", callback);
-        final TopicProducer<Object> topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangeConsumer topicConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", callback);
+        final ExchangePublisher<Object> topicProducer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         final Thread consumerThread = new Thread(topicConsumer);
         final Thread producerThread = new Thread(topicProducer);
         consumerThread.start();
@@ -146,16 +164,16 @@ public class TestStrangeStuff
     @Test
     public void testProducerGetsInterrupted() throws Exception
     {
-        final ConsumerCallback<Message> callback = new ConsumerCallback<Message>() {
+        final ConsumerCallback callback = new ConsumerCallback() {
 
             @Override
-            public boolean withMessage(Message message) throws JMSException {
+            public boolean withDelivery(Delivery delivery) throws IOException {
                 return true;
             }
         };
 
-        final ExchangeConsumer topicConsumer = topicRunnableFactory.createTopicListener("test-topic", callback);
-        final TopicProducer<Object> topicProducer = topicRunnableFactory.createTopicJsonProducer("test-topic");
+        final ExchangeConsumer topicConsumer = exchangeRunnableFactory.createExchangeListener("test-topic", callback);
+        final ExchangePublisher<Object> topicProducer = exchangeRunnableFactory.createExchangeJsonPublisher("test-topic");
         final Thread consumerThread = new Thread(topicConsumer);
         final Thread producerThread = new Thread(topicProducer);
         consumerThread.start();

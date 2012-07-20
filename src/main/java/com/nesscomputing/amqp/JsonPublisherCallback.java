@@ -20,8 +20,9 @@ import java.io.IOException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.nesscomputing.jackson.Json;
 import com.rabbitmq.client.AMQP.BasicProperties;
-import com.rabbitmq.client.Channel;
 
 /**
  * Converts arbitrary objects into JSON and returns a text message containing it.
@@ -30,30 +31,40 @@ public final class JsonPublisherCallback implements PublisherCallback<Object>
 {
     private ObjectMapper mapper = null;
 
-    private final String name;
     private final BasicProperties props;
 
-    JsonPublisherCallback(final String name, final ObjectMapper mapper)
+    @Inject
+    JsonPublisherCallback(@Json final ObjectMapper mapper)
     {
-        this.name = name;
         this.mapper = mapper;
 
         this.props = new BasicProperties.Builder()
         .contentType("application/json")
-        .deliveryMode(0)
+        .deliveryMode(1)
         .priority(0)
         .build();
     }
 
     @Override
-    public boolean publish(final Channel channel, final Object data) throws IOException
+    public PublisherData publish(final Object data) throws IOException
     {
         Preconditions.checkState(mapper != null, "need object mapper configured!");
 
         if (data != null) {
-            final byte [] result = mapper.writeValueAsBytes(data);
-            channel.basicPublish(name, null, props, result);
+            return new PublisherData() {
+                @Override
+                public BasicProperties getProperties() {
+                    return props;
+                }
+
+                @Override
+                public byte [] getData() throws IOException {
+                    return mapper.writeValueAsBytes(data);
+                }
+            };
         }
-        return true;
+        else {
+            return null;
+        }
     }
 }

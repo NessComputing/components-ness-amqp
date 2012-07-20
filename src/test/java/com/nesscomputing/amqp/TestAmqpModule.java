@@ -27,6 +27,7 @@ import com.google.inject.Stage;
 import com.google.inject.name.Names;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
+import com.nesscomputing.jackson.NessJacksonModule;
 import com.rabbitmq.client.ConnectionFactory;
 
 public class TestAmqpModule
@@ -38,6 +39,7 @@ public class TestAmqpModule
 
         Guice.createInjector(Stage.PRODUCTION,
                              new ConfigModule(config),
+                             new NessJacksonModule(),
                              new AmqpModule(config, "test"));
     }
 
@@ -48,6 +50,7 @@ public class TestAmqpModule
 
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         final AmqpConfig amqpConfig = injector.getInstance(Key.get(AmqpConfig.class, Names.named("test")));
@@ -64,6 +67,7 @@ public class TestAmqpModule
 
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         final AmqpConfig amqpConfig = injector.getInstance(Key.get(AmqpConfig.class, Names.named("test")));
@@ -76,10 +80,11 @@ public class TestAmqpModule
     public void testNamedWorksWithGlobalUri()
     {
         final Config config = Config.getFixedConfig(ImmutableMap.of("ness.amqp.test.enabled", "true",
-                                                                    "ness.amqp.connection-url", "amqp://localhost/"));
+                                                                    "ness.amqp.connection-url", "amqp://unknown-host/"));
 
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         final AmqpConfig amqpConfig = injector.getInstance(Key.get(AmqpConfig.class, Names.named("test")));
@@ -94,10 +99,11 @@ public class TestAmqpModule
     public void testNamedWorksWithLocalUri()
     {
         final Config config = Config.getFixedConfig(ImmutableMap.of("ness.amqp.test.enabled", "true",
-                                                                    "ness.amqp.test.connection-url", "amqp://localhost/"));
+                                                                    "ness.amqp.test.connection-url", "amqp://unknown-host/"));
 
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
                                                        new ConfigModule(config),
+                                                       new NessJacksonModule(),
                                                        new AmqpModule(config, "test"));
 
         final AmqpConfig amqpConfig = injector.getInstance(Key.get(AmqpConfig.class, Names.named("test")));
@@ -115,6 +121,7 @@ public class TestAmqpModule
 
         Guice.createInjector(Stage.PRODUCTION,
                              new ConfigModule(config),
+                             new NessJacksonModule(),
                              new AmqpModule(config, "test"));
     }
 
@@ -122,10 +129,11 @@ public class TestAmqpModule
     public void testMultipleModules()
     {
         final Config config = Config.getFixedConfig(ImmutableMap.of("ness.amqp.enabled", "true",
-                                                                    "ness.amqp.connection-url", "amqp://localhost/"));
+                                                                    "ness.amqp.connection-url", "amqp://unknown-host/"));
 
         final Injector injector = Guice.createInjector(Stage.PRODUCTION,
                 new ConfigModule(config),
+                new NessJacksonModule(),
                 new AmqpModule(config, "test"),
                 new AmqpModule(config, "test2"));
 

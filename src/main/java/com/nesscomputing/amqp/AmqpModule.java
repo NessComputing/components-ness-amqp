@@ -21,9 +21,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.nesscomputing.config.Config;
+import com.nesscomputing.jackson.Json;
 import com.nesscomputing.logging.Log;
 import com.rabbitmq.client.ConnectionFactory;
 
@@ -52,8 +54,10 @@ public class AmqpModule extends AbstractModule
         final Named connectionNamed;
         final AmqpConfig amqpConfig;
 
-
         connectionNamed = Names.named(connectionName);
+
+        bind(new TypeLiteral<PublisherCallback<Object>>() {}).annotatedWith(Json.class).to(JsonPublisherCallback.class).in(Scopes.SINGLETON);
+        bind(new TypeLiteral<PublisherCallback<String>>() {}).to(StringPublisherCallback.class).in(Scopes.SINGLETON);
 
         amqpConfig = config.getBean(AmqpConfig.class, ImmutableMap.of("name", connectionName));
         bind(AmqpConfig.class).annotatedWith(connectionNamed).toInstance(amqpConfig);

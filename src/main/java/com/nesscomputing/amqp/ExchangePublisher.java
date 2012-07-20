@@ -19,6 +19,7 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
+import com.nesscomputing.amqp.PublisherCallback.PublisherData;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
 
@@ -47,5 +48,13 @@ public final class ExchangePublisher<T> extends AbstractPublisher<T>
     protected void connectCallback(@Nonnull final Channel channel) throws IOException
     {
         channel.exchangeDeclare(getName(), getConfig().getExchangeType(), false, false, null);
+    }
+
+    @Override
+    protected void publish(final PublisherData publisherData) throws IOException
+    {
+        final Channel channel = channelConnect();
+        // An exchange has its own key and the default routing key...
+        channel.basicPublish(getName(), getName(), publisherData.getProperties(), publisherData.getData());
     }
 }

@@ -4,30 +4,37 @@ import java.io.IOException;
 
 import com.google.common.base.Charsets;
 import com.rabbitmq.client.AMQP.BasicProperties;
-import com.rabbitmq.client.Channel;
 
 public class StringPublisherCallback implements PublisherCallback<String>
 {
-    private final String name;
     private final BasicProperties props;
 
-    StringPublisherCallback(final String name)
+    StringPublisherCallback()
     {
-        this.name = name;
-
         this.props = new BasicProperties.Builder()
         .contentType("text/plain")
-        .deliveryMode(0)
+        .deliveryMode(1)
         .priority(0)
         .build();
     }
 
     @Override
-    public boolean publish(final Channel channel, final String data) throws IOException
+    public PublisherData publish(final String data) throws IOException
     {
         if (data != null) {
-            channel.basicPublish(name, null, props, data.getBytes(Charsets.UTF_8));
+            return new PublisherData() {
+                @Override
+                public BasicProperties getProperties() {
+                    return props;
+                }
+
+                @Override
+                public byte [] getData() throws IOException {
+                    return data.getBytes(Charsets.UTF_8);
+                }
+            };
         }
-        return true;
+
+        return null;
     }
 }

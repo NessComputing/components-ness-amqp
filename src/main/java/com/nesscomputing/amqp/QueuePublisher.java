@@ -19,6 +19,7 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
+import com.nesscomputing.amqp.PublisherCallback.PublisherData;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
 
@@ -47,5 +48,13 @@ public final class QueuePublisher<T> extends AbstractPublisher<T>
     protected void connectCallback(@Nonnull final Channel channel) throws IOException
     {
         channel.queueDeclare(getName(), false, false, false, null);
+    }
+
+    @Override
+    protected void publish(final PublisherData publisherData) throws IOException
+    {
+        final Channel channel = channelConnect();
+        // A queue is a routing key on the default exchange...
+        channel.basicPublish("", getName(), publisherData.getProperties(), publisherData.getData());
     }
 }

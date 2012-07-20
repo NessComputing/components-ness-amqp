@@ -70,6 +70,12 @@ public abstract class AbstractAmqpRunnable implements Runnable
         return channelHolder.get();
     }
 
+    public boolean isConnected()
+    {
+        final Channel channel = channelHolder.get();
+        return channel != null && channel.isOpen();
+    }
+
     @Override
     public void run()
     {

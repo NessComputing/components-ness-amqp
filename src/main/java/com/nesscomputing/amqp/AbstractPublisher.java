@@ -25,8 +25,8 @@ import javax.annotation.Nonnull;
 import org.skife.config.TimeSpan;
 
 import com.google.common.base.Preconditions;
+import com.nesscomputing.amqp.PublisherCallback.PublisherData;
 import com.nesscomputing.logging.Log;
-import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
 
 /**
@@ -123,10 +123,16 @@ public abstract class AbstractPublisher<T>  extends AbstractAmqpRunnable
 
         final T data = messageQueue.poll(tickTimeout.getPeriod(), tickTimeout.getUnit());
         if (data != null) {
-            final Channel channel = channelConnect();
-            return publisherCallback.publish(channel, data);
+            final PublisherData publisherData = publisherCallback.publish(data);
+
+            if (publisherData != null) {
+                publish(publisherData);
+                return getChannel().isOpen() && publisherData.isHealthy();
+            }
         }
 
         return true;
     }
+
+    protected abstract void publish(PublisherData publisherData) throws IOException;
 }

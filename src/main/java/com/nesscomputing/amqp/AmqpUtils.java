@@ -40,7 +40,7 @@ final class AmqpUtils
      */
     public static void closeQuietly(final Channel channel)
     {
-        if (channel != null) {
+        if (channel != null && channel.isOpen()) {
             try {
                 channel.close();
             }
@@ -57,7 +57,7 @@ final class AmqpUtils
      */
     public static void closeQuietly(final Connection connection)
     {
-        if (connection != null) {
+        if (connection != null && connection.isOpen()) {
             try {
                 connection.close();
             }

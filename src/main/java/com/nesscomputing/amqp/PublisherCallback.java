@@ -17,9 +17,10 @@ package com.nesscomputing.amqp;
 
 import java.io.IOException;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
-import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.AMQP.BasicProperties;
 
 public interface PublisherCallback<T>
 {
@@ -29,6 +30,17 @@ public interface PublisherCallback<T>
      * @param data The object to transmit.
      * @return A message object to transmit or null.
      */
-    boolean publish(@Nonnull Channel channel, @Nonnull T data) throws IOException;
-}
+    @CheckForNull
+    PublisherData publish(@Nonnull T data) throws IOException;
 
+    public static abstract class PublisherData
+    {
+        public abstract BasicProperties getProperties();
+
+        public abstract byte [] getData() throws IOException;
+
+        public boolean isHealthy() {
+            return true;
+        }
+    }
+}

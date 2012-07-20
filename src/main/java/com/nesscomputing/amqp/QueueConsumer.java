@@ -47,8 +47,11 @@ public final class QueueConsumer extends AbstractConsumer
     @Override
     protected void connectCallback(final Channel channel) throws IOException
     {
+        super.connectCallback(channel);
+
         channel.queueDeclare(getName(), false, false, false, null);
 
-        super.connectCallback(channel);
+        channel.basicConsume(getName(), false, getConsumer());
+
     }
 }

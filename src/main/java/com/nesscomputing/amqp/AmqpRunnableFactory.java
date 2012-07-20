@@ -19,13 +19,12 @@ import java.lang.annotation.Annotation;
 
 import javax.annotation.Nullable;
 
-import org.codehaus.jackson.map.ObjectMapper;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Singleton;
+import com.nesscomputing.jackson.Json;
 import com.rabbitmq.client.ConnectionFactory;
 
 /**
@@ -38,7 +37,8 @@ public class AmqpRunnableFactory
 
     private ConnectionFactory connectionFactory;
     private AmqpConfig amqpConfig;
-    private ObjectMapper objectMapper;
+    private PublisherCallback<Object> jsonPublisherCallback;
+    private PublisherCallback<String> stringPublisherCallback;
 
     AmqpRunnableFactory(@Nullable final Annotation annotation)
     {
@@ -46,7 +46,9 @@ public class AmqpRunnableFactory
     }
 
     @Inject
-    void inject(final Injector injector, final ObjectMapper objectMapper)
+    void inject(final Injector injector,
+                @Json final PublisherCallback<Object> jsonPublisherCallback,
+                final PublisherCallback<String> stringPublisherCallback)
     {
         if (annotation == null) {
             this.connectionFactory = injector.getInstance(Key.get(ConnectionFactory.class));
@@ -57,7 +59,8 @@ public class AmqpRunnableFactory
             this.amqpConfig = injector.getInstance(Key.get(AmqpConfig.class, annotation));
         }
 
-        this.objectMapper = objectMapper;
+        this.jsonPublisherCallback = jsonPublisherCallback;
+        this.stringPublisherCallback = stringPublisherCallback;
     }
 
     /**
@@ -84,20 +87,20 @@ public class AmqpRunnableFactory
      * Creates a new {@link ExchangePublisher}. The Publisher accepts arbitrary objects and uses the Jackson object mapper to convert them into
      * JSON and sends them as a text message.
      */
-    public ExchangePublisher<Object> createExchangeJsonPublisher(final String name)
+    public <T> ExchangePublisher<T> createExchangeJsonPublisher(final String name)
     {
         Preconditions.checkState(connectionFactory != null, "connection factory was never injected!");
-        return new ExchangePublisher<Object>(connectionFactory, amqpConfig, name, new JsonPublisherCallback(name, objectMapper));
+        return new ExchangePublisher<T>(connectionFactory, amqpConfig, name, jsonPublisherCallback);
     }
 
     /**
      * Creates a new {@link QueuePublisher}. The Publisher accepts arbitrary objects and uses the Jackson object mapper to convert them into
      * JSON and sends them as a text message.
      */
-    public QueuePublisher<Object> createQueueJsonPublisher(final String name)
+    public <T> QueuePublisher<T> createQueueJsonPublisher(final String name)
     {
         Preconditions.checkState(connectionFactory != null, "connection factory was never injected!");
-        return new QueuePublisher<Object>(connectionFactory, amqpConfig, name, new JsonPublisherCallback(name, objectMapper));
+        return new QueuePublisher<T>(connectionFactory, amqpConfig, name, jsonPublisherCallback);
     }
 
     /**
@@ -106,7 +109,7 @@ public class AmqpRunnableFactory
     public ExchangePublisher<String> createExchangeTextPublisher(final String name)
     {
         Preconditions.checkState(connectionFactory != null, "connection factory was never injected!");
-        return new ExchangePublisher<String>(connectionFactory, amqpConfig, name, new StringPublisherCallback(name));
+        return new ExchangePublisher<String>(connectionFactory, amqpConfig, name, stringPublisherCallback);
     }
 
     /**
@@ -115,7 +118,7 @@ public class AmqpRunnableFactory
     public QueuePublisher<String> createQueueTextPublisher(final String name)
     {
         Preconditions.checkState(connectionFactory != null, "connection factory was never injected!");
-        return new QueuePublisher<String>(connectionFactory, amqpConfig, name, new StringPublisherCallback(name));
+        return new QueuePublisher<String>(connectionFactory, amqpConfig, name, stringPublisherCallback);
     }
 
     /**
