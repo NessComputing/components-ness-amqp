@@ -64,6 +64,13 @@ public abstract class AmqpConfig
         return "fanout";
     }
 
+    @Config({"ness.amqp.${name}.routing-key", "ness.amqp.routing-key"})
+    @Default("default")
+    public String getRoutingKey()
+    {
+        return "default";
+    }
+
     /**
      * If the broker is connected, the message callback will be called after this many millis, no matter whether a message was
      * received or not.

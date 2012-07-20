@@ -29,6 +29,8 @@ import com.rabbitmq.client.ConnectionFactory;
  */
 public final class ExchangePublisher<T> extends AbstractPublisher<T>
 {
+    private final String routingKey;
+
     public ExchangePublisher(@Nonnull final ConnectionFactory connectionFactory,
                              @Nonnull final AmqpConfig amqpConfig,
                              @Nonnull final String name,
@@ -36,6 +38,8 @@ public final class ExchangePublisher<T> extends AbstractPublisher<T>
 
     {
         super(connectionFactory, amqpConfig, name, publisherCallback);
+
+        this.routingKey = amqpConfig.getRoutingKey();
     }
 
     @Override
@@ -54,7 +58,7 @@ public final class ExchangePublisher<T> extends AbstractPublisher<T>
     protected void publish(final PublisherData publisherData) throws IOException
     {
         final Channel channel = channelConnect();
-        // An exchange has its own key and the default routing key...
-        channel.basicPublish(getName(), "default", publisherData.getProperties(), publisherData.getData());
+        // An exchange has its own name and the default routing key...
+        channel.basicPublish(getName(), routingKey, publisherData.getProperties(), publisherData.getData());
     }
 }

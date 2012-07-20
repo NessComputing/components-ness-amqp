@@ -19,7 +19,6 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
-import com.google.inject.Inject;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
 
@@ -29,7 +28,6 @@ import com.rabbitmq.client.ConnectionFactory;
  */
 public final class QueueConsumer extends AbstractConsumer
 {
-    @Inject
     public QueueConsumer(@Nonnull final ConnectionFactory connectionFactory,
                          @Nonnull final AmqpConfig amqpConfig,
                          @Nonnull final String name,

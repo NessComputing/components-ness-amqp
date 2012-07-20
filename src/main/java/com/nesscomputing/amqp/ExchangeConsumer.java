@@ -19,7 +19,6 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
-import com.google.inject.Inject;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
 
@@ -29,13 +28,16 @@ import com.rabbitmq.client.ConnectionFactory;
  */
 public final class ExchangeConsumer extends AbstractConsumer
 {
-    @Inject
+    private final String routingKey;
+
     public ExchangeConsumer(@Nonnull final ConnectionFactory connectionFactory,
                             @Nonnull final AmqpConfig amqpConfig,
                             @Nonnull final String name,
                             @Nonnull final ConsumerCallback consumerCallback)
     {
         super(connectionFactory, amqpConfig, name, consumerCallback);
+
+        this.routingKey = amqpConfig.getRoutingKey();
     }
 
     @Override
@@ -51,7 +53,8 @@ public final class ExchangeConsumer extends AbstractConsumer
 
         channel.exchangeDeclare(getName(), getConfig().getExchangeType(), false, false, null);
         final String queueName = channel.queueDeclare().getQueue();
-        channel.queueBind(queueName, getName(), "default");
+
+        channel.queueBind(queueName, getName(), routingKey);
 
         channel.basicConsume(queueName, false, getConsumer());
     }
