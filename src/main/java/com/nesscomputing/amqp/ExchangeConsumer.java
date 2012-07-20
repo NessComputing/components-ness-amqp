@@ -51,7 +51,7 @@ public final class ExchangeConsumer extends AbstractConsumer
 
         channel.exchangeDeclare(getName(), getConfig().getExchangeType(), false, false, null);
         final String queueName = channel.queueDeclare().getQueue();
-        channel.queueBind(queueName, getName(), "");
+        channel.queueBind(queueName, getName(), "default");
 
         channel.basicConsume(queueName, false, getConsumer());
     }

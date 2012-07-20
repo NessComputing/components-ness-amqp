@@ -55,6 +55,6 @@ public final class ExchangePublisher<T> extends AbstractPublisher<T>
     {
         final Channel channel = channelConnect();
         // An exchange has its own key and the default routing key...
-        channel.basicPublish(getName(), getName(), publisherData.getProperties(), publisherData.getData());
+        channel.basicPublish(getName(), "default", publisherData.getProperties(), publisherData.getData());
     }
 }
