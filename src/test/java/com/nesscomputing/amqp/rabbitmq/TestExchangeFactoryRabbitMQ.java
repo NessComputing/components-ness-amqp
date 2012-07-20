@@ -1,10 +1,13 @@
 package com.nesscomputing.amqp.rabbitmq;
 
-import com.nesscomputing.amqp.AbstractTestStrangeStuff;
+import org.junit.Ignore;
+
+import com.nesscomputing.amqp.AbstractTestExchangeFactory;
 import com.nesscomputing.amqp.AmqpProvider;
 import com.nesscomputing.amqp.RabbitMQProvider;
 
-public class RabbitMQTestStrangeStuff extends AbstractTestStrangeStuff
+@Ignore
+public class TestExchangeFactoryRabbitMQ extends AbstractTestExchangeFactory
 {
     private AmqpProvider provider = new RabbitMQProvider();
 

@@ -35,7 +35,9 @@ import com.nesscomputing.amqp.util.DummyMessageCallback;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
 import com.nesscomputing.jackson.NessJacksonModule;
+import com.nesscomputing.testing.lessio.AllowNetworkListen;
 
+@AllowNetworkListen(ports={0})
 public abstract class AbstractTestExchangeFactory
 {
     @Inject

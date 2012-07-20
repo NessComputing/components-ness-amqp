@@ -34,8 +34,10 @@ import com.google.inject.name.Named;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
 import com.nesscomputing.jackson.NessJacksonModule;
+import com.nesscomputing.testing.lessio.AllowNetworkListen;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 
+@AllowNetworkListen(ports={0})
 public abstract class AbstractTestStrangeStuff
 {
     @Inject
