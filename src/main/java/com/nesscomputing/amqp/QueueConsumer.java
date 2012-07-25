@@ -47,7 +47,12 @@ public final class QueueConsumer extends AbstractConsumer
     {
         super.connectCallback(channel);
 
-        channel.queueDeclare(getName(), false, false, false, null);
+        if (getConfig().isDeclaring()) {
+            channel.queueDeclare(getName(),
+                                 getConfig().isDurable(),
+                                 getConfig().isExclusive(),
+                                 getConfig().isAutoDelete(), null);
+        }
 
         channel.basicConsume(getName(), false, getConsumer());
 

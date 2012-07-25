@@ -51,7 +51,12 @@ public final class ExchangePublisher<T> extends AbstractPublisher<T>
     @Override
     protected void connectCallback(@Nonnull final Channel channel) throws IOException
     {
-        channel.exchangeDeclare(getName(), getConfig().getExchangeType(), false, false, null);
+        if (getConfig().isDeclaring()) {
+            channel.exchangeDeclare(getName(),
+                                    getConfig().getExchangeType(),
+                                    getConfig().isDurable(),
+                                    getConfig().isAutoDelete(), null);
+        }
     }
 
     @Override

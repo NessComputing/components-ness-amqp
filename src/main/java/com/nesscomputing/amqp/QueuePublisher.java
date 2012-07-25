@@ -47,7 +47,13 @@ public final class QueuePublisher<T> extends AbstractPublisher<T>
     @Override
     protected void connectCallback(@Nonnull final Channel channel) throws IOException
     {
-        channel.queueDeclare(getName(), false, false, false, null);
+        if (getConfig().isDeclaring()) {
+            channel.queueDeclare(getName(),
+                                 getConfig().isDurable(),
+                                 getConfig().isExclusive(),
+                                 getConfig().isAutoDelete(), null);
+        }
+
     }
 
     @Override

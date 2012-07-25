@@ -123,4 +123,46 @@ public abstract class AmqpConfig
     {
         return new TimeSpan("10ms");
     }
+
+    /**
+     * Should the AMQP connector explicitly declare the exchange or queue it is connecting to.
+     * 
+     * Set to false if the exchange or queue on the Broker is known to exist.
+     */
+    @Config({"ness.amqp.${name}.declaring", "ness.amqp.declaring"})
+    @Default("true")
+    public boolean isDeclaring()
+    {
+        return true;
+    }
+
+    /**
+     * Declare a queue as exclusive.
+     */
+    @Config({"ness.amqp.${name}.exclusive", "ness.amqp.exclusive"})
+    @Default("false")
+    public boolean isExclusive()
+    {
+        return false;
+    }
+
+    /**
+     * Declare the exchange or queue as durable.
+     */
+    @Config({"ness.amqp.${name}.durable", "ness.amqp.durable"})
+    @Default("false")
+    public boolean isDurable()
+    {
+        return false;
+    }
+
+    /**
+     * Declare the exchange or queue as auto-deleting.
+     */
+    @Config({"ness.amqp.${name}.auto-delete", "ness.amqp.auto-delete"})
+    @Default("false")
+    public boolean isAutoDelete()
+    {
+        return false;
+    }
 }

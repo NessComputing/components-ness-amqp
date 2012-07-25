@@ -51,7 +51,12 @@ public final class ExchangeConsumer extends AbstractConsumer
     {
         super.connectCallback(channel);
 
-        channel.exchangeDeclare(getName(), getConfig().getExchangeType(), false, false, null);
+        if (getConfig().isDeclaring()) {
+            channel.exchangeDeclare(getName(),
+                                    getConfig().getExchangeType(),
+                                    getConfig().isDurable(),
+                                    getConfig().isAutoDelete(), null);
+        }
         final String queueName = channel.queueDeclare().getQueue();
 
         channel.queueBind(queueName, getName(), routingKey);
