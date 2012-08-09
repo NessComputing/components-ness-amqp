@@ -5,7 +5,7 @@
   <parent>
     <groupId>com.nesscomputing</groupId>
     <artifactId>ness-oss-parent</artifactId>
-    <version>14</version>
+    <version>15</version>
   </parent>
   <scm>
     <connection>scm:git:git://github.com/NessComputing/components-ness-amqp.git</connection>
@@ -22,7 +22,7 @@
 
   <properties>
     <dep.jackson.version>1.9.8</dep.jackson.version>
-    <dep.rabbitmq.version>2.8.4</dep.rabbitmq.version>
+    <dep.rabbitmq.version>2.8.5</dep.rabbitmq.version>
   </properties>
 
   <dependencies>
@@ -85,14 +85,14 @@
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-broker</artifactId>
-      <version>0.14</version>
+      <version>0.16</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-client</artifactId>
-      <version>0.14</version>
+      <version>0.16</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
