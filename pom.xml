@@ -11,12 +11,13 @@
     <connection>scm:git:git://github.com/NessComputing/components-ness-amqp.git</connection>
     <developerConnection>scm:git:git@github.com:NessComputing/components-ness-amqp.git</developerConnection>
     <url>http://github.com/NessComputing/components-ness-amqp</url>
+    <tag>ness-amqp-1.0.0</tag>
   </scm>
 
   <groupId>com.nesscomputing.components</groupId>
   <artifactId>ness-amqp</artifactId>
   <name>ness-amqp</name>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>jar</packaging>
   <description>Manage AMQP based broker connections.</description>
 
@@ -116,4 +117,20 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>com.ning.maven.plugins</groupId>
+          <artifactId>maven-duplicate-finder-plugin</artifactId>
+          <configuration>
+            <ignoredResources combine.children="append">
+              <ignoredResource>META-INF/README.txt</ignoredResource>
+            </ignoredResources>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 </project>
