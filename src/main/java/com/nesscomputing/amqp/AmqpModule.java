@@ -24,10 +24,11 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.nesscomputing.config.Config;
-import com.nesscomputing.jackson.Json;
-import com.nesscomputing.logging.Log;
 import com.rabbitmq.client.ConnectionFactory;
+
+import com.nesscomputing.config.Config;
+import com.nesscomputing.jackson.JsonMapper;
+import com.nesscomputing.logging.Log;
 
 /**
  * Provides access to AMQP queues and exchanges for the Ness platform.
@@ -56,7 +57,7 @@ public class AmqpModule extends AbstractModule
 
         connectionNamed = Names.named(connectionName);
 
-        bind(new TypeLiteral<PublisherCallback<Object>>() {}).annotatedWith(Json.class).to(JsonPublisherCallback.class).in(Scopes.SINGLETON);
+        bind(new TypeLiteral<PublisherCallback<Object>>() {}).annotatedWith(JsonMapper.class).to(JsonPublisherCallback.class).in(Scopes.SINGLETON);
         bind(new TypeLiteral<PublisherCallback<String>>() {}).to(StringPublisherCallback.class).in(Scopes.SINGLETON);
 
         amqpConfig = config.getBean(AmqpConfig.class, ImmutableMap.of("name", connectionName));

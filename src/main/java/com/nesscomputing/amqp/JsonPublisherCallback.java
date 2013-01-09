@@ -17,12 +17,12 @@ package com.nesscomputing.amqp;
 
 import java.io.IOException;
 
-import org.codehaus.jackson.map.ObjectMapper;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.nesscomputing.jackson.Json;
 import com.rabbitmq.client.AMQP.BasicProperties;
+
+import com.nesscomputing.jackson.JsonMapper;
 
 /**
  * Converts arbitrary objects into JSON and returns a text message containing it.
@@ -34,7 +34,7 @@ public final class JsonPublisherCallback implements PublisherCallback<Object>
     private final BasicProperties props;
 
     @Inject
-    JsonPublisherCallback(@Json final ObjectMapper mapper)
+    JsonPublisherCallback(@JsonMapper final ObjectMapper mapper)
     {
         this.mapper = mapper;
 

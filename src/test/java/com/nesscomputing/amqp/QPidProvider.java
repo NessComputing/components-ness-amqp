@@ -42,9 +42,12 @@ public class QPidProvider implements AmqpProvider
         final File configFile = new File(configUrl.toURI());
         BrokerOptions options = new BrokerOptions();
         options.setConfigFile(configFile.getAbsolutePath());
-        final URL log4jUrl = Resources.getResource(QPidProvider.class, "/log4j.xml");
-        final File log4jFile = new File(log4jUrl.toURI());
-        options.setLogConfigFile(log4jFile.getAbsolutePath());
+
+        // XXX: this fails if log4j.xml is in a JAR
+
+//        final URL log4jUrl = Resources.getResource(QPidProvider.class, "/log4j.xml");
+//        final File log4jFile = new File(log4jUrl.toURI());
+//        options.setLogConfigFile(log4jFile.getAbsolutePath());
 
         port = findUnusedPort();
         options.addPort(port);
