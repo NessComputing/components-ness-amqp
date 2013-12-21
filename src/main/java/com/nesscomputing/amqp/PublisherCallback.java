@@ -33,7 +33,7 @@ public interface PublisherCallback<T>
     @CheckForNull
     PublisherData publish(@Nonnull T data) throws IOException;
 
-    public static abstract class PublisherData
+    public abstract static class PublisherData
     {
         public abstract BasicProperties getProperties();
 
