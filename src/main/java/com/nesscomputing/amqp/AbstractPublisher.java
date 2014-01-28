@@ -22,12 +22,13 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
-import org.skife.config.TimeSpan;
-
 import com.google.common.base.Preconditions;
+import com.rabbitmq.client.ConnectionFactory;
+
 import com.nesscomputing.amqp.PublisherCallback.PublisherData;
 import com.nesscomputing.logging.Log;
-import com.rabbitmq.client.ConnectionFactory;
+
+import org.skife.config.TimeSpan;
 
 /**
  * AMQP object publisher. Puts objects onto an AMQP queue.

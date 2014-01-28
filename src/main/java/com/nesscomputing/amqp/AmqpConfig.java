@@ -126,7 +126,7 @@ public abstract class AmqpConfig
 
     /**
      * Should the AMQP connector explicitly declare the exchange or queue it is connecting to.
-     * 
+     *
      * Set to false if the exchange or queue on the Broker is known to exist.
      */
     @Config({"ness.amqp.${name}.declaring", "ness.amqp.declaring"})

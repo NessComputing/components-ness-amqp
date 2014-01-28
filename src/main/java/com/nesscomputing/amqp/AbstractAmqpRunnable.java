@@ -23,10 +23,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.base.Preconditions;
-import com.nesscomputing.logging.Log;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+
+import com.nesscomputing.logging.Log;
 
 /**
  * Base code for the exchange and queue runnables.

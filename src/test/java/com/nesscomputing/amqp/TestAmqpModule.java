@@ -15,9 +15,6 @@
  */
 package com.nesscomputing.amqp;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
@@ -25,10 +22,14 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Stage;
 import com.google.inject.name.Names;
+import com.rabbitmq.client.ConnectionFactory;
+
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
 import com.nesscomputing.jackson.NessJacksonModule;
-import com.rabbitmq.client.ConnectionFactory;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestAmqpModule
 {

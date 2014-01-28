@@ -15,11 +15,11 @@
  */
 package com.nesscomputing.amqp.rabbitmq;
 
-import org.junit.Ignore;
-
 import com.nesscomputing.amqp.AbstractTestExchangeFactory;
 import com.nesscomputing.amqp.AmqpProvider;
 import com.nesscomputing.amqp.RabbitMQProvider;
+
+import org.junit.Ignore;
 
 @Ignore
 public class TestExchangeFactoryRabbitMQ extends AbstractTestExchangeFactory
