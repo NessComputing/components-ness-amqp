@@ -4,45 +4,30 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.nesscomputing</groupId>
-    <artifactId>ness-oss-parent</artifactId>
-    <version>25</version>
+    <artifactId>ness-root</artifactId>
+    <version>1.0-SNAPSHOT</version>
   </parent>
-  <scm>
-    <connection>scm:git:git://github.com/NessComputing/components-ness-amqp.git</connection>
-    <developerConnection>scm:git:git@github.com:NessComputing/components-ness-amqp.git</developerConnection>
-    <url>http://github.com/NessComputing/components-ness-amqp</url>
-    <tag>HEAD</tag>
-  </scm>
 
   <groupId>com.nesscomputing.components</groupId>
   <artifactId>ness-amqp</artifactId>
   <name>ness-amqp</name>
-  <version>1.1.1-SNAPSHOT</version>
   <packaging>jar</packaging>
   <description>Manage AMQP based broker connections.</description>
-
-  <properties>
-    <dep.jackson.version>1.9.8</dep.jackson.version>
-    <dep.rabbitmq.version>2.8.5</dep.rabbitmq.version>
-  </properties>
 
   <dependencies>
     <dependency>
       <groupId>com.nesscomputing.components</groupId>
       <artifactId>ness-logging</artifactId>
-      <version>1.1.1</version>
     </dependency>
 
     <dependency>
       <groupId>com.nesscomputing.components</groupId>
       <artifactId>ness-config</artifactId>
-      <version>2.2.0</version>
     </dependency>
 
     <dependency>
       <groupId>com.nesscomputing.components</groupId>
       <artifactId>ness-jackson</artifactId>
-      <version>2.0.0</version>
     </dependency>
 
     <dependency>
@@ -57,7 +42,7 @@
 
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
+      <artifactId>annotations</artifactId>
     </dependency>
 
     <dependency>
@@ -69,13 +54,11 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <optional>true</optional>
-      <version>2.1.2</version>
     </dependency>
 
     <dependency>
       <groupId>com.rabbitmq</groupId>
       <artifactId>amqp-client</artifactId>
-      <version>${dep.rabbitmq.version}</version>
     </dependency>
 
     <dependency>
@@ -87,51 +70,13 @@
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-broker</artifactId>
-      <version>0.16</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-client</artifactId>
-      <version>0.16</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-core-asl</artifactId>
-        <version>${dep.jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-mapper-asl</artifactId>
-        <version>${dep.jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.1.1</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>com.ning.maven.plugins</groupId>
-          <artifactId>maven-duplicate-finder-plugin</artifactId>
-          <configuration>
-            <ignoredResources combine.children="append">
-              <ignoredResource>META-INF/README\.txt</ignoredResource>
-            </ignoredResources>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
 </project>

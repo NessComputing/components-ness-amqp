@@ -19,9 +19,10 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
-import com.nesscomputing.amqp.PublisherCallback.PublisherData;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
+
+import com.nesscomputing.amqp.PublisherCallback.PublisherData;
 
 /**
  * A general runnable that will keep the connection to an exchange alive and enqueue messages

@@ -18,8 +18,9 @@ package com.nesscomputing.amqp.util;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.nesscomputing.amqp.ConsumerCallback;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
+
+import com.nesscomputing.amqp.ConsumerCallback;
 
 
 public class CountingMessageCallback implements ConsumerCallback

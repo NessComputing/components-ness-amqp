@@ -17,11 +17,6 @@ package com.nesscomputing.amqp;
 
 import static java.lang.String.format;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
@@ -30,12 +25,18 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.name.Named;
+
 import com.nesscomputing.amqp.util.CountingMessageCallback;
 import com.nesscomputing.amqp.util.DummyMessageCallback;
 import com.nesscomputing.config.Config;
 import com.nesscomputing.config.ConfigModule;
 import com.nesscomputing.jackson.NessJacksonModule;
-import com.nesscomputing.testing.lessio.AllowNetworkListen;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.kitei.testing.lessio.AllowNetworkListen;
 
 @AllowNetworkListen(ports={0})
 public abstract class AbstractTestExchangeFactory

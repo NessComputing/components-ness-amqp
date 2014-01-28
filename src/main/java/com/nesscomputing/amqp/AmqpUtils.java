@@ -17,9 +17,10 @@ package com.nesscomputing.amqp;
 
 import java.io.IOException;
 
-import com.nesscomputing.logging.Log;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+
+import com.nesscomputing.logging.Log;
 
 /**
  * Helper methods to deal with AMQP stuff.

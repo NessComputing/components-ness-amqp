@@ -24,9 +24,9 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Singleton;
-import com.nesscomputing.jackson.JsonMapper;
-
 import com.rabbitmq.client.ConnectionFactory;
+
+import com.nesscomputing.jackson.JsonMapper;
 
 /**
  * Factory to create new Runnables to access exchanges and queues.
